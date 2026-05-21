@@ -39,6 +39,9 @@ header h1 span{display:block;font-size:.8rem;font-weight:400;color:var(--text3);
 .metric{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem}
 .metric .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .metric .val{font-size:1.6rem;font-weight:700;font-family:var(--mono);color:var(--text);letter-spacing:-.03em}
+.metric.clickable{cursor:pointer;transition:box-shadow .15s,transform .1s}
+.metric.clickable:hover{box-shadow:0 2px 10px rgba(0,0,0,.08);transform:translateY(-1px)}
+.metric.clickable.active{border-width:2px;border-color:currentColor}
 
 /* Controls */
 .controls{max-width:960px;margin:0 auto 1.25rem;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -178,6 +181,8 @@ tbody td:nth-child(3){text-align:right}
         <option value="soon">7天內到期</option>
         <option value="month">30天內到期</option>
       </select>
+      <div class="sep"></div>
+      <button id="showSingleBtn" data-active="0" onclick="toggleSingle()" style="font-family:var(--sans);font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">顯示單組商品</button>
     </div>
     <div class="pred-grid" id="predCards"></div>
   </div>
@@ -365,23 +370,45 @@ function renderHistory() {
 }
 
 // ===== 補貨預測 =====
+function toggleSingle() {
+  const btn = document.getElementById('showSingleBtn');
+  const active = btn.dataset.active === '1';
+  btn.dataset.active = active ? '0' : '1';
+  btn.style.background = active ? 'var(--surface)' : 'var(--accent-light)';
+  btn.style.color = active ? 'var(--text2)' : 'var(--accent)';
+  btn.style.borderColor = active ? 'var(--border)' : 'var(--accent-mid)';
+  btn.textContent = active ? '顯示單組商品' : '隱藏單組商品';
+  renderPredict();
+}
+
+function setPredMode(mode) {
+  document.getElementById('pfM').value = mode;
+  renderPredict();
+}
+
 function renderPredict() {
   const cv=document.getElementById('pfC').value, mode=document.getElementById('pfM').value;
+  const showSingle = document.getElementById('showSingleBtn').dataset.active === '1';
   let f=ALL_DATA.filter(r=>{
     if (!r.avg_gap) return false;
     if (cv&&r.customer!==cv) return false;
+    if (!showSingle && Math.max(...r.entries.map(e=>e[1])) <= 1) return false;
     if (mode==='overdue'&&r.days_until>=0) return false;
     if (mode==='soon'&&(r.days_until<0||r.days_until>7)) return false;
     if (mode==='month'&&(r.days_until<0||r.days_until>30)) return false;
     return true;
   });
   f.sort((a,b)=>b.urgency-a.urgency);
-  const overdue=f.filter(r=>r.days_until<0).length, soon7=f.filter(r=>r.days_until>=0&&r.days_until<=7).length, soon30=f.filter(r=>r.days_until>7&&r.days_until<=30).length;
+  const allWithCycle=ALL_DATA.filter(r=>r.avg_gap&&(!cv||r.customer===cv)&&(showSingle||Math.max(...r.entries.map(e=>e[1]))>1));
+  const overdue=allWithCycle.filter(r=>r.days_until<0).length;
+  const soon7=allWithCycle.filter(r=>r.days_until>=0&&r.days_until<=7).length;
+  const soon30=allWithCycle.filter(r=>r.days_until>7&&r.days_until<=30).length;
+  const curMode=document.getElementById('pfM').value;
   document.getElementById('predSumBar').innerHTML=`
-    <div class="metric"><div class="lbl">有週期商品</div><div class="val">${f.length}</div></div>
-    <div class="metric"><div class="lbl" style="color:var(--red)">已逾期</div><div class="val" style="color:var(--red)">${overdue}</div></div>
-    <div class="metric"><div class="lbl" style="color:var(--warn)">7天內到期</div><div class="val" style="color:var(--warn)">${soon7}</div></div>
-    <div class="metric"><div class="lbl">30天內到期</div><div class="val">${soon30}</div></div>`;
+    <div class="metric clickable${curMode==='all'?' active':''}" onclick="setPredMode('all')"><div class="lbl">有週期商品</div><div class="val">${allWithCycle.length}</div></div>
+    <div class="metric clickable${curMode==='overdue'?' active':''}" onclick="setPredMode('overdue')"><div class="lbl" style="color:var(--red)">已逾期</div><div class="val" style="color:var(--red)">${overdue}</div></div>
+    <div class="metric clickable${curMode==='soon'?' active':''}" onclick="setPredMode('soon')"><div class="lbl" style="color:var(--warn)">7天內到期</div><div class="val" style="color:var(--warn)">${soon7}</div></div>
+    <div class="metric clickable${curMode==='month'?' active':''}" onclick="setPredMode('month')"><div class="lbl">30天內到期</div><div class="val">${soon30}</div></div>`;
   if (!f.length){document.getElementById('predCards').innerHTML='<div class="empty">無符合條件的資料</div>';return;}
   document.getElementById('predCards').innerHTML=f.map((r,i)=>{
     const isOverdue=r.days_until<0, isSoon=!isOverdue&&r.days_until<=7;
