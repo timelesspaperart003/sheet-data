@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP 情境組叫貨週期分析</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+  :root{--bg:#f5f3ef;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd6;--text:#1a1714;--text2:#6b6560;--text3:#9e9993;--accent:#2d6a4f;--accent-light:#e8f5ef;--accent-mid:#74c69d;--warn:#c77a2a;--warn-light:#fdf3e7;--mono:'DM Mono',monospace;--sans:'Noto Sans TC',sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding:2rem 1.5rem 4rem}
+  header{max-width:960px;margin:0 auto 2rem;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem;padding-bottom:1.25rem;border-bottom:1.5px solid var(--border)}
+  header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  header h1 span{display:block;font-size:.8rem;font-weight:400;color:var(--text3);margin-bottom:4px;font-family:var(--mono)}
+  .updated{font-size:11px;color:var(--text3);font-family:var(--mono)}
+  .summary-bar{max-width:960px;margin:0 auto 1.5rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .metric{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem}
+  .metric .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .metric .val{font-size:1.6rem;font-weight:700;font-family:var(--mono);color:var(--text);letter-spacing:-.03em}
+  .controls{max-width:960px;margin:0 auto 1.25rem;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .controls label{font-size:12px;color:var(--text2);font-weight:500}
+  select{font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;outline:none}
+  select:focus{border-color:var(--accent-mid)}
+  .sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+  .cards{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:box-shadow .15s}
+  .card:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .card-head{display:flex;align-items:center;gap:10px;padding:11px 16px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+  .tag-c{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--text2);white-space:nowrap}
+  .pname{font-size:14px;font-weight:700;color:var(--text);flex:1;min-width:160px}
+  .cbadge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap;font-family:var(--mono)}
+  .c-hot{background:#fff0e6;color:#b85a00}
+  .c-normal{background:var(--accent-light);color:var(--accent)}
+  .c-once{background:var(--surface2);color:var(--text3)}
+  .total-note{font-size:12px;color:var(--text3);font-family:var(--mono);white-space:nowrap}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:7px 16px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border)}
+  thead th:nth-child(2),thead th:nth-child(3){text-align:right}
+  tbody td{padding:8px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody td:nth-child(2){text-align:right}
+  tbody td:nth-child(3){text-align:right}
+  .dcel{font-family:var(--mono);font-size:13px}
+  .qcell{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+  .qnum{font-family:var(--mono);font-weight:700;font-size:14px;min-width:28px;text-align:right}
+  .bar-wrap{width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+  .bar-fill{height:6px;border-radius:3px;background:var(--accent-mid)}
+  .gtag{display:inline-block;font-size:11px;font-family:var(--mono);padding:2px 8px;border-radius:99px;background:var(--warn-light);color:var(--warn);white-space:nowrap}
+  .ftag{font-size:11px;font-family:var(--mono);color:var(--text3)}
+  .loading{max-width:960px;margin:4rem auto;text-align:center;color:var(--text3);font-size:14px}
+  .loading .spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent-mid);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error{max-width:960px;margin:2rem auto;padding:1rem 1.25rem;background:var(--warn-light);border:1px solid #f5d9b0;border-radius:10px;font-size:13px;color:var(--warn)}
+  .empty{text-align:center;padding:3rem;color:var(--text3);font-size:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
+  @media(max-width:600px){.bar-wrap{display:none}.card-head{gap:7px}thead th:nth-child(3),tbody td:nth-child(3){display:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>雋永紙藝 · VIP 出貨單</span>情境組叫貨週期分析</h1>
+  <div class="updated" id="updatedAt">載入中...</div>
+</header>
+
+<div id="loadingEl" class="loading">
+  <div class="spinner"></div>
+  正在讀取最新資料...
+</div>
+
+<div class="summary-bar" id="sumBar" style="display:none"></div>
+<div class="controls" id="ctrlEl" style="display:none">
+  <label>客戶</label>
+  <select id="fC" onchange="render()"><option value="">全部</option></select>
+  <div class="sep"></div>
+  <label>商品</label>
+  <select id="fP" onchange="render()"><option value="">全部</option></select>
+  <div class="sep"></div>
+  <label>顯示</label>
+  <select id="fM" onchange="render()">
+    <option value="all">全部</option>
+    <option value="multi">有週期（多次下單）</option>
+    <option value="once">僅一次下單</option>
+  </select>
+</div>
+<div class="cards" id="cards"></div>
+
+<script>
+const DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/vip_orders.json';
+
+let DATA = [];
+
+function parseDate(s) {
+  const m = String(s).match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2]-1, +m[3]);
+}
+
+function buildData(rows) {
+  const header = rows[0];
+  const dataRows = rows.slice(1);
+
+  // Find 品項/數量 column pairs
+  const itemCols = [];
+  header.forEach((h, i) => {
+    if (h.startsWith('品項') && !h.startsWith('品項備')) {
+      const num = h.replace('品項', '');
+      const qIdx = header.indexOf('數量' + num);
+      if (qIdx !== -1) itemCols.push([i, qIdx]);
+    }
+  });
+
+  const dateCol = header.indexOf('下單日期');
+  const custCol = header.indexOf('客戶名稱');
+
+  const records = [];
+  dataRows.forEach(row => {
+    const date = parseDate(row[dateCol]);
+    const customer = String(row[custCol] || '').trim();
+    if (!date || !customer) return;
+    itemCols.forEach(([ii, qi]) => {
+      const product = String(row[ii] || '').trim();
+      if (!product.includes('情境組')) return;
+      if (/[*$改補修]/.test(product)) return;
+      const qty = parseInt(row[qi]);
+      if (isNaN(qty) || qty <= 0) return;
+      records.push({ date, customer, product, qty });
+    });
+  });
+
+  // Group by (customer, product, date) sum
+  const map = {};
+  records.forEach(r => {
+    const key = `${r.customer}|||${r.product}|||${r.date.getTime()}`;
+    map[key] = (map[key] || 0) + r.qty;
+  });
+
+  // Build timeline
+  const tl = {};
+  Object.entries(map).forEach(([key, qty]) => {
+    const [customer, product, ts] = key.split('|||');
+    const k2 = `${customer}|||${product}`;
+    if (!tl[k2]) tl[k2] = [];
+    tl[k2].push([new Date(+ts), qty]);
+  });
+
+  const results = [];
+  Object.entries(tl).forEach(([key, entries]) => {
+    const [customer, product] = key.split('|||');
+    entries.sort((a, b) => a[0] - b[0]);
+    const gaps = entries.slice(1).map((e, i) => Math.round((e[0] - entries[i][0]) / 86400000));
+    const realGaps = gaps.filter(g => g > 0);
+    const avg_gap = realGaps.length ? Math.round(realGaps.reduce((a,b)=>a+b,0)/realGaps.length) : null;
+    results.push({
+      customer, product,
+      entries: entries.map(([d, q]) => [d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/'), q]),
+      gaps,
+      avg_gap,
+      total_qty: entries.reduce((s,[,q])=>s+q, 0)
+    });
+  });
+
+  results.sort((a,b) => a.customer.localeCompare(b.customer) || a.product.localeCompare(b.product));
+  return results;
+}
+
+function render() {
+  const cv = document.getElementById('fC').value;
+  const pv = document.getElementById('fP').value;
+  const mode = document.getElementById('fM').value;
+
+  let f = DATA.filter(r => {
+    if (cv && r.customer !== cv) return false;
+    if (pv && r.product !== pv) return false;
+    if (mode === 'multi' && !r.avg_gap) return false;
+    if (mode === 'once' && r.avg_gap) return false;
+    return true;
+  });
+
+  f.sort((a,b) => {
+    if (a.avg_gap && !b.avg_gap) return -1;
+    if (!a.avg_gap && b.avg_gap) return 1;
+    if (a.avg_gap && b.avg_gap) return a.avg_gap - b.avg_gap;
+    return a.customer.localeCompare(b.customer);
+  });
+
+  const tq = f.reduce((s,r)=>s+r.total_qty, 0);
+  const wc = f.filter(r=>r.avg_gap);
+  const ac = wc.length ? Math.round(wc.reduce((s,r)=>s+r.avg_gap,0)/wc.length) : null;
+
+  document.getElementById('sumBar').innerHTML = `
+    <div class="metric"><div class="lbl">品項數</div><div class="val">${f.length}</div></div>
+    <div class="metric"><div class="lbl">累積總叫貨量</div><div class="val">${tq.toLocaleString()}</div></div>
+    <div class="metric"><div class="lbl">有週期品項</div><div class="val">${wc.length}</div></div>
+    <div class="metric"><div class="lbl">平均補貨週期</div><div class="val">${ac ? ac+'天' : '—'}</div></div>`;
+
+  if (!f.length) {
+    document.getElementById('cards').innerHTML = '<div class="empty">無符合條件的資料</div>';
+    return;
+  }
+
+  const mq = Math.max(...f.flatMap(r => r.entries.map(e => e[1])));
+
+  document.getElementById('cards').innerHTML = f.map(r => {
+    let badge = '';
+    if (r.avg_gap && r.avg_gap <= 14) badge = `<span class="cbadge c-hot">每 ${r.avg_gap} 天</span>`;
+    else if (r.avg_gap) badge = `<span class="cbadge c-normal">每 ${r.avg_gap} 天</span>`;
+    else badge = `<span class="cbadge c-once">僅一次</span>`;
+
+    const trows = r.entries.map(([d,q], i) => {
+      const g = i > 0 ? r.gaps[i-1] : null;
+      const p = Math.round((q/mq)*100);
+      const gh = g != null ? `<span class="gtag">+${g} 天</span>` : `<span class="ftag">首次</span>`;
+      return `<tr><td><span class="dcel">${d}</span></td><td><div class="qcell"><div class="bar-wrap"><div class="bar-fill" style="width:${p}%"></div></div><span class="qnum">${q}</span></div></td><td>${gh}</td></tr>`;
+    }).join('');
+
+    return `<div class="card"><div class="card-head"><span class="tag-c">${r.customer}</span><span class="pname">${r.product}</span>${badge}<span class="total-note">累計 ${r.total_qty} 組</span></div><table><thead><tr><th>下單日期</th><th>叫貨量</th><th>距上次間隔</th></tr></thead><tbody>${trows}</tbody></table></div>`;
+  }).join('');
+}
+
+async function init() {
+  try {
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const sheet = json['客戶下單記錄'];
+    if (!sheet) throw new Error('找不到工作表資料');
+
+    DATA = buildData(sheet.rows);
+
+    // Populate filters
+    const customers = [...new Set(DATA.map(d=>d.customer))].sort();
+    const products  = [...new Set(DATA.map(d=>d.product))].sort();
+    const fC = document.getElementById('fC');
+    const fP = document.getElementById('fP');
+    customers.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;fC.appendChild(o)});
+    products.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;fP.appendChild(o)});
+
+    document.getElementById('updatedAt').textContent = '資料更新：' + sheet.updatedAt;
+    document.getElementById('loadingEl').style.display = 'none';
+    document.getElementById('sumBar').style.display = 'grid';
+    document.getElementById('ctrlEl').style.display = 'flex';
+
+    render();
+  } catch(err) {
+    document.getElementById('loadingEl').style.display = 'none';
+    document.getElementById('cards').innerHTML = `<div class="error">⚠ 資料載入失敗：${err.message}<br>請先執行 GAS 的 pushToGitHub 更新資料後重新整理。</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
