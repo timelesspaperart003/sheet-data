@@ -8,27 +8,57 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
 :root{--bg:#f5f3ef;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd6;--text:#1a1714;--text2:#6b6560;--text3:#9e9993;--accent:#2d6a4f;--accent-light:#e8f5ef;--accent-mid:#74c69d;--warn:#c77a2a;--warn-light:#fdf3e7;--red:#b83232;--red-light:#fdf0f0;--mono:'DM Mono',monospace;--sans:'Noto Sans TC',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding:2rem 1.5rem 4rem}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ===== LOGIN ===== */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:360px;text-align:center}
+.login-box h2{font-size:1.2rem;font-weight:700;margin-bottom:.4rem}
+.login-box p{font-size:13px;color:var(--text3);margin-bottom:1.5rem}
+.login-box input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;outline:none;margin-bottom:10px;background:var(--surface)}
+.login-box input:focus{border-color:var(--accent-mid)}
+.login-box button{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer}
+.login-box button:hover{opacity:.9}
+.login-err{font-size:12px;color:var(--red);margin-top:8px;min-height:18px}
+
+/* ===== MAIN ===== */
+#mainScreen{display:none;padding:2rem 1.5rem 4rem}
 header{max-width:960px;margin:0 auto 1.5rem;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem;padding-bottom:1.25rem;border-bottom:1.5px solid var(--border)}
 header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
 header h1 span{display:block;font-size:.8rem;font-weight:400;color:var(--text3);margin-bottom:4px;font-family:var(--mono)}
 .updated{font-size:11px;color:var(--text3);font-family:var(--mono)}
+
 /* Tabs */
-.tabs{max-width:960px;margin:0 auto 1.5rem;display:flex;gap:4px;border-bottom:1.5px solid var(--border);padding-bottom:0}
+.tabs{max-width:960px;margin:0 auto 1.5rem;display:flex;gap:4px;border-bottom:1.5px solid var(--border)}
 .tab{font-size:13px;font-weight:500;padding:7px 18px;border-radius:8px 8px 0 0;cursor:pointer;color:var(--text2);background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s}
 .tab:hover{color:var(--text);background:var(--surface2)}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--surface)}
+
 /* Summary */
 .summary-bar{max-width:960px;margin:0 auto 1.25rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .metric{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem}
 .metric .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .metric .val{font-size:1.6rem;font-weight:700;font-family:var(--mono);color:var(--text);letter-spacing:-.03em}
+
 /* Controls */
 .controls{max-width:960px;margin:0 auto 1.25rem;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .controls label{font-size:12px;color:var(--text2);font-weight:500}
 select{font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;outline:none}
 select:focus{border-color:var(--accent-mid)}
 .sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+
+/* Searchable select */
+.search-select-wrap{position:relative;display:inline-block}
+.search-select-wrap input{font-family:var(--sans);font-size:13px;padding:5px 28px 5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:200px;cursor:text}
+.search-select-wrap input:focus{border-color:var(--accent-mid)}
+.search-select-wrap::after{content:'▾';position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text3);pointer-events:none}
+.search-dropdown{position:absolute;top:calc(100% + 4px);left:0;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:100;max-height:240px;overflow-y:auto;display:none}
+.search-dropdown.open{display:block}
+.search-option{padding:7px 12px;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-option:hover,.search-option.selected{background:var(--accent-light);color:var(--accent)}
+.search-option.no-result{color:var(--text3);cursor:default}
+.search-option.no-result:hover{background:transparent}
+
 /* Cards */
 .cards{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:box-shadow .15s}
@@ -55,7 +85,8 @@ tbody td:nth-child(3){text-align:right}
 .bar-fill{height:6px;border-radius:3px;background:var(--accent-mid)}
 .gtag{display:inline-block;font-size:11px;font-family:var(--mono);padding:2px 8px;border-radius:99px;background:var(--warn-light);color:var(--warn);white-space:nowrap}
 .ftag{font-size:11px;font-family:var(--mono);color:var(--text3)}
-/* Prediction tab */
+
+/* Prediction */
 .pred-grid{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
 .pred-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .pred-card.overdue{border-color:#f5c0c0;background:var(--red-light)}
@@ -71,31 +102,43 @@ tbody td:nth-child(3){text-align:right}
 .urgency-label{font-size:12px;font-weight:700;font-family:var(--mono)}
 .pred-next{font-size:12px;color:var(--text3);font-family:var(--mono);white-space:nowrap}
 .pred-qty{font-size:12px;color:var(--text2);font-family:var(--mono);white-space:nowrap}
-/* Loading */
+
+/* Loading / utils */
 .loading{max-width:960px;margin:4rem auto;text-align:center;color:var(--text3);font-size:14px}
 .spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent-mid);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 .error{max-width:960px;margin:2rem auto;padding:1rem 1.25rem;background:var(--warn-light);border:1px solid #f5d9b0;border-radius:10px;font-size:13px;color:var(--warn)}
 .empty{text-align:center;padding:3rem;color:var(--text3);font-size:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
 .hidden{display:none!important}
-@media(max-width:600px){.bar-wrap{display:none}.card-head{gap:7px}thead th:nth-child(3),tbody td:nth-child(3){display:none}.urgency-wrap{display:none}}
+@media(max-width:600px){.bar-wrap{display:none}.card-head{gap:7px}thead th:nth-child(3),tbody td:nth-child(3){display:none}.urgency-wrap{display:none}.search-select-wrap input{width:140px}}
 </style>
 </head>
 <body>
-<header>
-  <h1><span>雋永紙藝 · VIP 出貨單</span>情境組叫貨分析</h1>
-  <div class="updated" id="updatedAt">載入中...</div>
-</header>
 
-<div id="loadingEl" class="loading"><div class="spinner"></div>正在讀取最新資料...</div>
+<!-- 登入頁 -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h2>雋永紙藝</h2>
+    <p>VIP 情境組叫貨分析系統</p>
+    <input type="password" id="pwInput" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">登入</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
 
-<div id="mainContent" class="hidden">
+<!-- 主畫面 -->
+<div id="mainScreen">
+  <header>
+    <h1><span>雋永紙藝 · VIP 出貨單</span>情境組叫貨分析</h1>
+    <div class="updated" id="updatedAt"></div>
+  </header>
+
   <div class="tabs">
     <button class="tab active" onclick="switchTab('history')">📋 叫貨記錄</button>
     <button class="tab" onclick="switchTab('predict')">🔮 補貨預測</button>
   </div>
 
-  <!-- 叫貨記錄 tab -->
+  <!-- 叫貨記錄 -->
   <div id="tabHistory">
     <div class="summary-bar" id="sumBar"></div>
     <div class="controls">
@@ -103,7 +146,13 @@ tbody td:nth-child(3){text-align:right}
       <select id="fC" onchange="renderHistory()"><option value="">全部</option></select>
       <div class="sep"></div>
       <label>商品</label>
-      <select id="fP" onchange="renderHistory()"><option value="">全部</option></select>
+      <div class="search-select-wrap" id="productSearchWrap">
+        <input type="text" id="productSearch" placeholder="全部" autocomplete="off"
+          oninput="filterProductDropdown()"
+          onfocus="openProductDropdown()"
+          onblur="setTimeout(()=>closeProductDropdown(),150)">
+        <div class="search-dropdown" id="productDropdown"></div>
+      </div>
       <div class="sep"></div>
       <label>顯示</label>
       <select id="fM" onchange="renderHistory()">
@@ -115,7 +164,7 @@ tbody td:nth-child(3){text-align:right}
     <div class="cards" id="historyCards"></div>
   </div>
 
-  <!-- 補貨預測 tab -->
+  <!-- 補貨預測 -->
   <div id="tabPredict" class="hidden">
     <div class="summary-bar" id="predSumBar"></div>
     <div class="controls">
@@ -137,8 +186,82 @@ tbody td:nth-child(3){text-align:right}
 <script>
 const DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/vip_orders.json';
 let ALL_DATA = [];
+let AUTH_HASHES = [];
+let selectedProduct = '';
 let currentTab = 'history';
 
+// ===== 密碼驗證 =====
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  if (!pw) return;
+  const hash = await sha256(pw);
+  if (AUTH_HASHES.includes(hash)) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    sessionStorage.setItem('vip_auth', hash);
+  } else {
+    document.getElementById('loginErr').textContent = '密碼錯誤，請再試一次';
+    document.getElementById('pwInput').value = '';
+  }
+}
+
+// ===== 商品搜尋下拉 =====
+let allProducts = [];
+
+function buildProductDropdown(products) {
+  allProducts = ['', ...products];
+  renderProductOptions('');
+}
+
+function renderProductOptions(keyword) {
+  const dd = document.getElementById('productDropdown');
+  const filtered = allProducts.filter(p => !keyword || p.includes(keyword));
+  if (!filtered.length) {
+    dd.innerHTML = '<div class="search-option no-result">無符合商品</div>';
+    return;
+  }
+  dd.innerHTML = filtered.map(p =>
+    `<div class="search-option${p===selectedProduct?' selected':''}" onmousedown="selectProduct('${p.replace(/'/g,"\\'")}')">${p || '全部'}</div>`
+  ).join('');
+}
+
+function filterProductDropdown() {
+  const kw = document.getElementById('productSearch').value;
+  renderProductOptions(kw);
+  openProductDropdown();
+}
+
+function openProductDropdown() {
+  renderProductOptions(document.getElementById('productSearch').value);
+  document.getElementById('productDropdown').classList.add('open');
+}
+
+function closeProductDropdown() {
+  document.getElementById('productDropdown').classList.remove('open');
+  // 如果輸入的不是有效選項，還原顯示
+  const inp = document.getElementById('productSearch');
+  if (!allProducts.includes(selectedProduct)) {
+    selectedProduct = '';
+    inp.value = '';
+  } else {
+    inp.value = selectedProduct || '';
+  }
+}
+
+function selectProduct(val) {
+  selectedProduct = val;
+  document.getElementById('productSearch').value = val || '';
+  document.getElementById('productSearch').placeholder = val ? '' : '全部';
+  closeProductDropdown();
+  renderHistory();
+}
+
+// ===== 資料處理 =====
 function parseDate(s) {
   const m = String(s).match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
   if (!m) return null;
@@ -146,92 +269,73 @@ function parseDate(s) {
 }
 
 function buildData(rows) {
-  const header = rows[0];
-  const dataRows = rows.slice(1);
+  const header = rows[0], dataRows = rows.slice(1);
   const itemCols = [];
-  header.forEach((h, i) => {
+  header.forEach((h,i) => {
     if (h.startsWith('品項') && !h.startsWith('品項備')) {
       const num = h.replace('品項','');
       const qi = header.indexOf('數量'+num);
-      if (qi !== -1) itemCols.push([i, qi]);
+      if (qi!==-1) itemCols.push([i,qi]);
     }
   });
-  const dateCol = header.indexOf('下單日期');
-  const custCol = header.indexOf('客戶名稱');
+  const dateCol = header.indexOf('下單日期'), custCol = header.indexOf('客戶名稱');
   const records = [];
   dataRows.forEach(row => {
-    const d = parseDate(row[dateCol]);
-    const c = String(row[custCol]||'').trim();
-    if (!d || !c) return;
+    const d = parseDate(row[dateCol]), c = String(row[custCol]||'').trim();
+    if (!d||!c) return;
     itemCols.forEach(([ii,qi]) => {
       const p = String(row[ii]||'').trim();
-      if (!p.includes('情境組') || /[*$改補修]/.test(p)) return;
+      if (!p.includes('情境組')||/[*$改補修]/.test(p)) return;
       const q = parseInt(row[qi]);
-      if (!isNaN(q) && q > 0) records.push({date:d, customer:c, product:p, qty:q});
+      if (!isNaN(q)&&q>0) records.push({date:d,customer:c,product:p,qty:q});
     });
   });
-
   const map = {};
-  records.forEach(r => {
-    const k = `${r.customer}|||${r.product}|||${r.date.getTime()}`;
-    map[k] = (map[k]||0) + r.qty;
-  });
-
+  records.forEach(r => { const k=`${r.customer}|||${r.product}|||${r.date.getTime()}`; map[k]=(map[k]||0)+r.qty; });
   const tl = {};
   Object.entries(map).forEach(([k,q]) => {
-    const [c,p,ts] = k.split('|||');
-    const k2 = `${c}|||${p}`;
-    if (!tl[k2]) tl[k2] = [];
-    tl[k2].push([new Date(+ts), q]);
+    const [c,p,ts]=k.split('|||'), k2=`${c}|||${p}`;
+    if (!tl[k2]) tl[k2]=[];
+    tl[k2].push([new Date(+ts),q]);
   });
-
-  const TODAY = new Date(2026, 4, 21);
+  const TODAY = new Date(2026,4,21);
   const results = [];
-  Object.entries(tl).forEach(([k, entries]) => {
-    const [customer, product] = k.split('|||');
+  Object.entries(tl).forEach(([k,entries]) => {
+    const [customer,product]=k.split('|||');
     entries.sort((a,b)=>a[0]-b[0]);
-    const gaps = entries.slice(1).map((e,i)=>Math.round((e[0]-entries[i][0])/86400000));
-    const realGaps = gaps.filter(g=>g>0);
-    const avg_gap = realGaps.length ? Math.round(realGaps.reduce((a,b)=>a+b,0)/realGaps.length) : null;
-    const lastDate = entries[entries.length-1][0];
-    const daysSince = Math.round((TODAY - lastDate)/86400000);
-    const daysUntil = avg_gap ? avg_gap - daysSince : null;
-    const urgency = avg_gap ? Math.round(daysSince/avg_gap*100) : 0;
-    const nextDate = (avg_gap && daysUntil !== null)
-      ? new Date(TODAY.getTime() + Math.max(0,daysUntil)*86400000).toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'})
-      : null;
-    results.push({
-      customer, product,
-      entries: entries.map(([d,q])=>[d.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}),q]),
-      gaps, avg_gap,
-      total_qty: entries.reduce((s,[,q])=>s+q,0),
-      last_date: lastDate.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}),
-      last_qty: entries[entries.length-1][1],
-      days_since: daysSince,
-      days_until: daysUntil,
-      urgency, next_date: nextDate
-    });
+    const gaps=entries.slice(1).map((e,i)=>Math.round((e[0]-entries[i][0])/86400000));
+    const realGaps=gaps.filter(g=>g>0);
+    const avg_gap=realGaps.length?Math.round(realGaps.reduce((a,b)=>a+b,0)/realGaps.length):null;
+    const lastDate=entries[entries.length-1][0];
+    const daysSince=Math.round((TODAY-lastDate)/86400000);
+    const daysUntil=avg_gap?avg_gap-daysSince:null;
+    const urgency=avg_gap?Math.round(daysSince/avg_gap*100):0;
+    const fmt = d => d.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+    const nextDate=(avg_gap&&daysUntil!==null)?fmt(new Date(TODAY.getTime()+Math.max(0,daysUntil)*86400000)):null;
+    results.push({customer,product,entries:entries.map(([d,q])=>[fmt(d),q]),gaps,avg_gap,
+      total_qty:entries.reduce((s,[,q])=>s+q,0),last_date:fmt(lastDate),
+      last_qty:entries[entries.length-1][1],days_since:daysSince,days_until:daysUntil,urgency,next_date:nextDate});
   });
   results.sort((a,b)=>a.customer.localeCompare(b.customer)||a.product.localeCompare(b.product));
   return results;
 }
 
+// ===== Tab =====
 function switchTab(tab) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', (i===0&&tab==='history')||(i===1&&tab==='predict')));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='history')||(i===1&&tab==='predict')));
   document.getElementById('tabHistory').classList.toggle('hidden', tab!=='history');
   document.getElementById('tabPredict').classList.toggle('hidden', tab!=='predict');
 }
 
+// ===== 叫貨記錄 =====
 function renderHistory() {
-  const cv = document.getElementById('fC').value;
-  const pv = document.getElementById('fP').value;
-  const mode = document.getElementById('fM').value;
-  let f = ALL_DATA.filter(r => {
-    if (cv && r.customer!==cv) return false;
-    if (pv && r.product!==pv) return false;
-    if (mode==='multi' && !r.avg_gap) return false;
-    if (mode==='once' && r.avg_gap) return false;
+  const cv=document.getElementById('fC').value, pv=selectedProduct, mode=document.getElementById('fM').value;
+  let f=ALL_DATA.filter(r=>{
+    if (cv&&r.customer!==cv) return false;
+    if (pv&&r.product!==pv) return false;
+    if (mode==='multi'&&!r.avg_gap) return false;
+    if (mode==='once'&&r.avg_gap) return false;
     return true;
   });
   f.sort((a,b)=>{
@@ -240,110 +344,97 @@ function renderHistory() {
     if (a.avg_gap&&b.avg_gap) return a.avg_gap-b.avg_gap;
     return a.customer.localeCompare(b.customer);
   });
-  const tq = f.reduce((s,r)=>s+r.total_qty,0);
-  const wc = f.filter(r=>r.avg_gap);
-  const ac = wc.length ? Math.round(wc.reduce((s,r)=>s+r.avg_gap,0)/wc.length) : null;
-  document.getElementById('sumBar').innerHTML = `
+  const tq=f.reduce((s,r)=>s+r.total_qty,0), wc=f.filter(r=>r.avg_gap);
+  const ac=wc.length?Math.round(wc.reduce((s,r)=>s+r.avg_gap,0)/wc.length):null;
+  document.getElementById('sumBar').innerHTML=`
     <div class="metric"><div class="lbl">品項數</div><div class="val">${f.length}</div></div>
     <div class="metric"><div class="lbl">累積總叫貨量</div><div class="val">${tq.toLocaleString()}</div></div>
     <div class="metric"><div class="lbl">有週期品項</div><div class="val">${wc.length}</div></div>
     <div class="metric"><div class="lbl">平均補貨週期</div><div class="val">${ac?ac+'天':'—'}</div></div>`;
-  if (!f.length) { document.getElementById('historyCards').innerHTML='<div class="empty">無符合條件的資料</div>'; return; }
-  const mq = Math.max(...f.flatMap(r=>r.entries.map(e=>e[1])));
-  document.getElementById('historyCards').innerHTML = f.map(r => {
-    let badge = r.avg_gap && r.avg_gap<=14 ? `<span class="cbadge c-hot">每 ${r.avg_gap} 天</span>`
-              : r.avg_gap ? `<span class="cbadge c-normal">每 ${r.avg_gap} 天</span>`
-              : `<span class="cbadge c-once">僅一次</span>`;
-    const trows = r.entries.map(([d,q],i)=>{
-      const g = i>0?r.gaps[i-1]:null;
-      const p = Math.round((q/mq)*100);
-      const gh = g!=null?`<span class="gtag">+${g} 天</span>`:`<span class="ftag">首次</span>`;
+  if (!f.length){document.getElementById('historyCards').innerHTML='<div class="empty">無符合條件的資料</div>';return;}
+  const mq=Math.max(...f.flatMap(r=>r.entries.map(e=>e[1])));
+  document.getElementById('historyCards').innerHTML=f.map(r=>{
+    const badge=r.avg_gap&&r.avg_gap<=14?`<span class="cbadge c-hot">每 ${r.avg_gap} 天</span>`:r.avg_gap?`<span class="cbadge c-normal">每 ${r.avg_gap} 天</span>`:`<span class="cbadge c-once">僅一次</span>`;
+    const trows=r.entries.map(([d,q],i)=>{
+      const g=i>0?r.gaps[i-1]:null, p=Math.round((q/mq)*100);
+      const gh=g!=null?`<span class="gtag">+${g} 天</span>`:`<span class="ftag">首次</span>`;
       return `<tr><td><span class="dcel">${d}</span></td><td><div class="qcell"><div class="bar-wrap"><div class="bar-fill" style="width:${p}%"></div></div><span class="qnum">${q}</span></div></td><td>${gh}</td></tr>`;
     }).join('');
     return `<div class="card"><div class="card-head"><span class="tag-c">${r.customer}</span><span class="pname">${r.product}</span>${badge}<span class="total-note">累計 ${r.total_qty} 組</span></div><table><thead><tr><th>下單日期</th><th>叫貨量</th><th>距上次間隔</th></tr></thead><tbody>${trows}</tbody></table></div>`;
   }).join('');
 }
 
+// ===== 補貨預測 =====
 function renderPredict() {
-  const cv = document.getElementById('pfC').value;
-  const mode = document.getElementById('pfM').value;
-  let f = ALL_DATA.filter(r => {
+  const cv=document.getElementById('pfC').value, mode=document.getElementById('pfM').value;
+  let f=ALL_DATA.filter(r=>{
     if (!r.avg_gap) return false;
-    if (cv && r.customer!==cv) return false;
-    if (mode==='overdue' && r.days_until >= 0) return false;
-    if (mode==='soon' && (r.days_until < 0 || r.days_until > 7)) return false;
-    if (mode==='month' && (r.days_until < 0 || r.days_until > 30)) return false;
+    if (cv&&r.customer!==cv) return false;
+    if (mode==='overdue'&&r.days_until>=0) return false;
+    if (mode==='soon'&&(r.days_until<0||r.days_until>7)) return false;
+    if (mode==='month'&&(r.days_until<0||r.days_until>30)) return false;
     return true;
   });
-  // Sort by urgency desc
-  f.sort((a,b) => b.urgency - a.urgency);
-
-  const overdue = f.filter(r=>r.days_until<0).length;
-  const soon7 = f.filter(r=>r.days_until>=0&&r.days_until<=7).length;
-  const soon30 = f.filter(r=>r.days_until>7&&r.days_until<=30).length;
-
-  document.getElementById('predSumBar').innerHTML = `
+  f.sort((a,b)=>b.urgency-a.urgency);
+  const overdue=f.filter(r=>r.days_until<0).length, soon7=f.filter(r=>r.days_until>=0&&r.days_until<=7).length, soon30=f.filter(r=>r.days_until>7&&r.days_until<=30).length;
+  document.getElementById('predSumBar').innerHTML=`
     <div class="metric"><div class="lbl">有週期商品</div><div class="val">${f.length}</div></div>
     <div class="metric"><div class="lbl" style="color:var(--red)">已逾期</div><div class="val" style="color:var(--red)">${overdue}</div></div>
     <div class="metric"><div class="lbl" style="color:var(--warn)">7天內到期</div><div class="val" style="color:var(--warn)">${soon7}</div></div>
     <div class="metric"><div class="lbl">30天內到期</div><div class="val">${soon30}</div></div>`;
-
-  if (!f.length) { document.getElementById('predCards').innerHTML='<div class="empty">無符合條件的資料</div>'; return; }
-
-  document.getElementById('predCards').innerHTML = f.map((r,i) => {
-    const isOverdue = r.days_until < 0;
-    const isSoon = !isOverdue && r.days_until <= 7;
-    const cardClass = isOverdue ? 'pred-card overdue' : isSoon ? 'pred-card soon' : 'pred-card';
-    const urgPct = Math.min(r.urgency, 100);
-    const urgColor = r.urgency>=100 ? '#b83232' : r.urgency>=70 ? '#c77a2a' : '#74c69d';
-    const urgLabel = isOverdue
-      ? `<span class="urgency-label" style="color:var(--red)">逾期 ${Math.abs(r.days_until)} 天</span>`
-      : `<span class="urgency-label" style="color:${urgColor}">${r.days_until} 天後</span>`;
-    const sinceText = `距上次 ${r.days_since} 天 / 週期 ${r.avg_gap} 天`;
+  if (!f.length){document.getElementById('predCards').innerHTML='<div class="empty">無符合條件的資料</div>';return;}
+  document.getElementById('predCards').innerHTML=f.map((r,i)=>{
+    const isOverdue=r.days_until<0, isSoon=!isOverdue&&r.days_until<=7;
+    const cardClass=isOverdue?'pred-card overdue':isSoon?'pred-card soon':'pred-card';
+    const urgPct=Math.min(r.urgency,100), urgColor=r.urgency>=100?'#b83232':r.urgency>=70?'#c77a2a':'#74c69d';
+    const urgLabel=isOverdue?`<span class="urgency-label" style="color:var(--red)">逾期 ${Math.abs(r.days_until)} 天</span>`:`<span class="urgency-label" style="color:${urgColor}">${r.days_until} 天後</span>`;
     return `<div class="${cardClass}">
       <div class="pred-rank">#${i+1}</div>
-      <div class="pred-info">
-        <div><span class="pred-customer">${r.customer}</span></div>
-        <div class="pred-product">${r.product}</div>
-        <div class="pred-meta">${sinceText}</div>
-      </div>
-      <div class="pred-qty">預估叫 ${r.last_qty} 組</div>
-      <div class="pred-next">${r.next_date ? '預測：'+r.next_date : ''}</div>
-      <div class="urgency-wrap">
-        ${urgLabel}
-        <div class="urgency-bar-bg"><div class="urgency-bar-fill" style="width:${urgPct}%;background:${urgColor}"></div></div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${r.urgency}%</div>
-      </div>
+      <div class="pred-info"><div><span class="pred-customer">${r.customer}</span></div><div class="pred-product">${r.product}</div><div class="pred-meta">距上次 ${r.days_since} 天 / 週期 ${r.avg_gap} 天</div></div>
+      <div class="pred-qty">預估 ${r.last_qty} 組</div>
+      <div class="pred-next">${r.next_date?'預測：'+r.next_date:''}</div>
+      <div class="urgency-wrap">${urgLabel}<div class="urgency-bar-bg"><div class="urgency-bar-fill" style="width:${urgPct}%;background:${urgColor}"></div></div><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${r.urgency}%</div></div>
     </div>`;
   }).join('');
 }
 
+// ===== 初始化 =====
 async function init() {
   try {
     const res = await fetch(DATA_URL + '?t=' + Date.now());
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
+
+    // 讀取密碼 hash
+    AUTH_HASHES = json._auth?.hashes || [];
+
+    // 檢查 sessionStorage 是否已登入
+    const cached = sessionStorage.getItem('vip_auth');
+    if (cached && AUTH_HASHES.includes(cached)) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainScreen').style.display = 'block';
+    }
+
     const sheet = json['客戶下單記錄'];
     if (!sheet) throw new Error('找不到工作表資料');
     ALL_DATA = buildData(sheet.rows);
 
     const customers = [...new Set(ALL_DATA.map(d=>d.customer))].sort();
     const products  = [...new Set(ALL_DATA.map(d=>d.product))].sort();
-    ['fC','pfC'].forEach(id => {
-      const sel = document.getElementById(id);
+
+    ['fC','pfC'].forEach(id=>{
+      const sel=document.getElementById(id);
       customers.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)});
     });
-    const fP = document.getElementById('fP');
-    products.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;fP.appendChild(o)});
 
+    buildProductDropdown(products);
     document.getElementById('updatedAt').textContent = '資料更新：' + sheet.updatedAt;
-    document.getElementById('loadingEl').classList.add('hidden');
-    document.getElementById('mainContent').classList.remove('hidden');
     renderHistory();
     renderPredict();
   } catch(err) {
-    document.getElementById('loadingEl').classList.add('hidden');
-    document.getElementById('mainContent').innerHTML = `<div class="error">⚠ 資料載入失敗：${err.message}<br>請先執行 GAS 的 pushToGitHub 後重新整理。</div>`;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    document.getElementById('mainScreen').innerHTML = `<div class="error" style="margin:4rem auto">⚠ 資料載入失敗：${err.message}<br>請先執行 GAS 的 pushToGitHub 後重新整理。</div>`;
   }
 }
 init();
