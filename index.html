@@ -446,11 +446,12 @@ function renderPredict() {
 // ===== SiteGiant 商品週期（不分客戶，純商品彙整） =====
 // 資料來源：同一份 vip_orders.json 裡的「SiteGiant已出貨」key（GAS SHEETS_TO_EXPORT 多讀一份表），
 // 不分客戶（SiteGiant 收件人跟這裡的客戶名稱沒有共通ID，比不了），在瀏覽器端依商品+下單日彙整週期。
-function buildSgProductData(rows) {
+function buildSgProductData(rows, skuMap) {
   // 「SiteGiant已出貨」這張表沒有標題列(第一列就是真實資料)，欄位順序固定照 sync.gs 的 COLUMNS：
   // order_id,marketplace_order_id,channel_name,order_status,order_time,ship_by_date,recipient_name,...
   const IDX_ORDER_TIME = 4, IDX_ITEMS_JSON = 15;
   if (!rows || !rows.length) return [];
+  skuMap = skuMap || {};
 
   const byProductDay = {};
   rows.forEach(row => {
@@ -460,7 +461,9 @@ function buildSgProductData(rows) {
     try { items = row[IDX_ITEMS_JSON] ? JSON.parse(row[IDX_ITEMS_JSON]) : []; } catch (e) { items = []; }
     const dayKey = d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
     items.forEach(it => {
-      const name = String(it.name||'').trim();
+      const sku = String(it.sku||it.isku||'').trim();
+      // 有對到產品表 SKU 就用產品表的品名(跟VIP頁面同一套名稱)，查不到才退回SiteGiant自己的商品名
+      const name = (sku && skuMap[sku]) || String(it.name||'').trim();
       const qty = Number(it.qty)||0;
       if (!name || qty<=0) return;
       if (!byProductDay[name]) byProductDay[name] = {};
@@ -560,7 +563,7 @@ async function init() {
     renderPredict();
 
     const sgSheet = json['SiteGiant已出貨'];
-    SG_DATA = sgSheet ? buildSgProductData(sgSheet.rows) : [];
+    SG_DATA = sgSheet ? buildSgProductData(sgSheet.rows, json._skuMap) : [];
     renderSgProduct();
   } catch(err) {
     document.getElementById('loginScreen').style.display = 'none';
