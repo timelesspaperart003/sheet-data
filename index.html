@@ -165,6 +165,11 @@ tbody td:nth-child(3){text-align:right}
         <option value="multi">有週期（多次下單）</option>
         <option value="once">僅一次下單</option>
       </select>
+      <div class="sep"></div>
+      <label>區間</label>
+      <input type="date" id="fFrom" onchange="renderHistory()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      <span style="color:var(--text3)">～</span>
+      <input type="date" id="fTo" onchange="renderHistory()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
     </div>
     <div class="cards" id="historyCards"></div>
   </div>
@@ -209,6 +214,18 @@ tbody td:nth-child(3){text-align:right}
         <option value="cycle">週期（短→長）</option>
         <option value="qty">總量（多→少）</option>
       </select>
+      <div class="sep"></div>
+      <label>類別</label>
+      <select id="sgCat" onchange="renderSgProduct()">
+        <option value="all">全部</option>
+        <option value="custom">客製化</option>
+        <option value="stock">叫貨商品</option>
+      </select>
+      <div class="sep"></div>
+      <label>區間</label>
+      <input type="date" id="sgFrom" onchange="renderSgProduct()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      <span style="color:var(--text3)">～</span>
+      <input type="date" id="sgTo" onchange="renderSgProduct()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
     </div>
     <div class="cards" id="sgCards"></div>
   </div>
@@ -220,6 +237,11 @@ tbody td:nth-child(3){text-align:right}
       <label>搜尋</label>
       <input type="text" id="mergedSearch" placeholder="商品名稱" autocomplete="off" oninput="renderMerged()"
         style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
+      <div class="sep"></div>
+      <label>區間</label>
+      <input type="date" id="mergedFrom" onchange="renderMerged()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      <span style="color:var(--text3)">～</span>
+      <input type="date" id="mergedTo" onchange="renderMerged()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
     </div>
     <div class="tableWrap" style="max-width:960px;margin:0 auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
@@ -322,6 +344,29 @@ function parseDate(s) {
   return new Date(+m[1], +m[2]-1, +m[3]);
 }
 
+// ===== 時間區間篩選共用工具（叫貨記錄/SiteGiant商品週期/商品合併統計三個分頁共用） =====
+function readRange(fromId, toId) {
+  const fromV = document.getElementById(fromId).value, toV = document.getElementById(toId).value;
+  return { from: fromV ? new Date(fromV+'T00:00:00') : null, to: toV ? new Date(toV+'T23:59:59') : null };
+}
+function inRange(dt, range) {
+  if (!dt) return false;
+  if (range.from && dt < range.from) return false;
+  if (range.to && dt > range.to) return false;
+  return true;
+}
+function filterEntriesInRange(entries, range) {
+  if (!range.from && !range.to) return entries;
+  return entries.filter(([d]) => inRange(parseDate(d), range));
+}
+function sumEntriesInRange(entries, range) {
+  return entries.filter(([d]) => inRange(parseDate(d), range)).reduce((s,[,q])=>s+q, 0);
+}
+function recomputeGaps(entries) {
+  const dates = entries.map(([d]) => parseDate(d));
+  return dates.slice(1).map((d,i) => Math.round((d - dates[i]) / 86400000));
+}
+
 function buildData(rows) {
   const header = rows[0], dataRows = rows.slice(1);
   const itemCols = [];
@@ -387,6 +432,8 @@ function switchTab(tab) {
 // ===== 叫貨記錄 =====
 function renderHistory() {
   const cv=document.getElementById('fC').value, pv=selectedProduct, mode=document.getElementById('fM').value;
+  const range = readRange('fFrom','fTo');
+  const hasRange = !!(range.from || range.to);
   let f=ALL_DATA.filter(r=>{
     if (cv&&r.customer!==cv) return false;
     if (pv&&r.product!==pv) return false;
@@ -394,6 +441,12 @@ function renderHistory() {
     if (mode==='once'&&r.avg_gap) return false;
     return true;
   });
+  if (hasRange) {
+    f = f.map(r => {
+      const entries = filterEntriesInRange(r.entries, range);
+      return {...r, entries, gaps: recomputeGaps(entries), total_qty: entries.reduce((s,[,q])=>s+q,0)};
+    }).filter(r => r.entries.length > 0);
+  }
   f.sort((a,b)=>{
     if (a.avg_gap&&!b.avg_gap) return -1;
     if (!a.avg_gap&&b.avg_gap) return 1;
@@ -487,6 +540,7 @@ function buildSgProductData(rows, skuMap) {
   skuMap = skuMap || {};
 
   const byProductDay = {};
+  const matchedFlag = {}; // 商品名 -> 是否曾用SKU比對到產品表（true=客製化，false=叫貨商品）
   rows.forEach(row => {
     const d = parseDate(row[IDX_ORDER_TIME]);
     if (!d) return;
@@ -495,12 +549,15 @@ function buildSgProductData(rows, skuMap) {
     const dayKey = d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
     items.forEach(it => {
       const sku = String(it.sku||it.isku||'').trim();
+      const matched = !!(sku && skuMap[sku]);
       // 有對到產品表 SKU 就用產品表的品名(跟VIP頁面同一套名稱)，查不到才退回SiteGiant自己的商品名
-      const name = (sku && skuMap[sku]) || String(it.name||'').trim();
+      const name = matched ? skuMap[sku] : String(it.name||'').trim();
       const qty = Number(it.qty)||0;
       if (!name || qty<=0) return;
       if (!byProductDay[name]) byProductDay[name] = {};
       byProductDay[name][dayKey] = (byProductDay[name][dayKey]||0) + qty;
+      if (matched) matchedFlag[name] = true;
+      else if (!(name in matchedFlag)) matchedFlag[name] = false;
     });
   });
 
@@ -522,7 +579,8 @@ function buildSgProductData(rows, skuMap) {
     const nextDate=(avg_gap&&daysUntil!==null)?fmt(new Date(TODAY.getTime()+Math.max(0,daysUntil)*86400000)):null;
     results.push({product, entries: entries.map(([d,q])=>[fmt(d),q]), gaps, avg_gap,
       total_qty: entries.reduce((s,[,q])=>s+q,0), last_date: fmt(lastDate),
-      last_qty: entries[entries.length-1][1], days_since: daysSince, days_until: daysUntil, urgency, next_date: nextDate});
+      last_qty: entries[entries.length-1][1], days_since: daysSince, days_until: daysUntil, urgency, next_date: nextDate,
+      category: matchedFlag[product] ? '客製化' : '叫貨商品'});
   });
   results.sort((a,b)=>a.product.localeCompare(b.product));
   return results;
@@ -532,12 +590,23 @@ function renderSgProduct() {
   const mode = document.getElementById('sgfM').value;
   const sortBy = document.getElementById('sgSort').value;
   const kw = document.getElementById('sgSearch').value.trim();
+  const cat = document.getElementById('sgCat').value;
+  const range = readRange('sgFrom','sgTo');
+  const hasRange = !!(range.from || range.to);
   let f = SG_DATA.filter(r => {
     if (mode==='multi' && !r.avg_gap) return false;
     if (mode==='once' && r.avg_gap) return false;
     if (kw && !r.product.includes(kw)) return false;
+    if (cat==='custom' && r.category!=='客製化') return false;
+    if (cat==='stock' && r.category!=='叫貨商品') return false;
     return true;
   });
+  if (hasRange) {
+    f = f.map(r => {
+      const entries = filterEntriesInRange(r.entries, range);
+      return {...r, entries, gaps: recomputeGaps(entries), total_qty: entries.reduce((s,[,q])=>s+q,0)};
+    }).filter(r => r.entries.length > 0);
+  }
   if (sortBy === 'qty') {
     f.sort((a,b) => b.total_qty - a.total_qty || a.product.localeCompare(b.product));
   } else {
@@ -564,23 +633,32 @@ function renderSgProduct() {
       const gh=g!=null?`<span class="gtag">+${g} 天</span>`:`<span class="ftag">首次</span>`;
       return `<tr><td><span class="dcel">${d}</span></td><td><div class="qcell"><div class="bar-wrap"><div class="bar-fill" style="width:${p}%"></div></div><span class="qnum">${q}</span></div></td><td>${gh}</td></tr>`;
     }).join('');
-    return `<div class="card"><div class="card-head"><span class="pname">${r.product}</span>${badge}<span class="total-note">累計 ${r.total_qty} 組</span></div><table><thead><tr><th>下單日期</th><th>叫貨量</th><th>距上次間隔</th></tr></thead><tbody>${trows}</tbody></table></div>`;
+    const catTag = `<span class="tag-c">${r.category}</span>`;
+    return `<div class="card"><div class="card-head">${catTag}<span class="pname">${r.product}</span>${badge}<span class="total-note">累計 ${r.total_qty} 組</span></div><table><thead><tr><th>下單日期</th><th>叫貨量</th><th>距上次間隔</th></tr></thead><tbody>${trows}</tbody></table></div>`;
   }).join('');
 }
 
 // ===== 商品合併統計：VIP(客戶下單記錄，跨客戶加總)＋SiteGiant(已出貨)，依商品名稱合併 =====
 // 只合總量，不合週期——兩邊「週期」定義不同(VIP是同客戶重複下單間隔，SiteGiant是不分客戶的下單間隔)，合起來沒有意義。
-function aggregateVipByProduct(allData) {
+function aggregateVipByProduct(allData, range) {
   const map = {};
-  allData.forEach(r => { map[r.product] = (map[r.product]||0) + r.total_qty; });
+  allData.forEach(r => {
+    const qty = range ? sumEntriesInRange(r.entries, range) : r.total_qty;
+    if (qty > 0) map[r.product] = (map[r.product]||0) + qty;
+  });
   return map;
 }
 
 function renderMerged() {
   const kw = document.getElementById('mergedSearch').value.trim();
-  const vipMap = aggregateVipByProduct(ALL_DATA);
+  const range = readRange('mergedFrom','mergedTo');
+  const hasRange = !!(range.from || range.to);
+  const vipMap = aggregateVipByProduct(ALL_DATA, hasRange ? range : null);
   const sgMap = {};
-  SG_DATA.forEach(r => { sgMap[r.product] = r.total_qty; });
+  SG_DATA.forEach(r => {
+    const qty = hasRange ? sumEntriesInRange(r.entries, range) : r.total_qty;
+    if (qty > 0) sgMap[r.product] = (sgMap[r.product]||0) + qty;
+  });
 
   const products = [...new Set([...Object.keys(vipMap), ...Object.keys(sgMap)])];
   let rows = products.map(p => {
