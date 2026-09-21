@@ -140,6 +140,7 @@ tbody td:nth-child(3){text-align:right}
     <button class="tab active" onclick="switchTab('history')">📋 叫貨記錄</button>
     <button class="tab" onclick="switchTab('predict')">🔮 補貨預測</button>
     <button class="tab" onclick="switchTab('sgproduct')">📦 SiteGiant 商品週期</button>
+    <button class="tab" onclick="switchTab('merged')">🔗 商品合併統計</button>
   </div>
 
   <!-- 叫貨記錄 -->
@@ -192,14 +193,45 @@ tbody td:nth-child(3){text-align:right}
   <div id="tabSgProduct" class="hidden">
     <div class="summary-bar" id="sgSumBar"></div>
     <div class="controls">
+      <label>搜尋</label>
+      <input type="text" id="sgSearch" placeholder="商品名稱" autocomplete="off" oninput="renderSgProduct()"
+        style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
+      <div class="sep"></div>
       <label>顯示</label>
       <select id="sgfM" onchange="renderSgProduct()">
         <option value="all">全部</option>
         <option value="multi">有週期（多次下單）</option>
         <option value="once">僅一次下單</option>
       </select>
+      <div class="sep"></div>
+      <label>排序</label>
+      <select id="sgSort" onchange="renderSgProduct()">
+        <option value="cycle">週期（短→長）</option>
+        <option value="qty">總量（多→少）</option>
+      </select>
     </div>
     <div class="cards" id="sgCards"></div>
+  </div>
+
+  <!-- 商品合併統計：VIP客戶下單記錄 + SiteGiant已出貨，依商品名稱合併看總量（不含週期，兩邊統計口徑不同） -->
+  <div id="tabMerged" class="hidden">
+    <div class="summary-bar" id="mergedSumBar"></div>
+    <div class="controls">
+      <label>搜尋</label>
+      <input type="text" id="mergedSearch" placeholder="商品名稱" autocomplete="off" oninput="renderMerged()"
+        style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
+    </div>
+    <div class="tableWrap" style="max-width:960px;margin:0 auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <thead><tr>
+          <th style="text-align:left">商品名稱</th>
+          <th style="text-align:right">VIP累計量</th>
+          <th style="text-align:right">SiteGiant累計量</th>
+          <th style="text-align:right">合計</th>
+        </tr></thead>
+        <tbody id="mergedRows"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -210,7 +242,7 @@ let SG_DATA = [];
 let AUTH_HASHES = [];
 let selectedProduct = '';
 let currentTab = 'history';
-const TAB_IDS = ['history','predict','sgproduct'];
+const TAB_IDS = ['history','predict','sgproduct','merged'];
 
 // ===== 密碼驗證 =====
 async function sha256(str) {
@@ -349,6 +381,7 @@ function switchTab(tab) {
   document.getElementById('tabHistory').classList.toggle('hidden', tab!=='history');
   document.getElementById('tabPredict').classList.toggle('hidden', tab!=='predict');
   document.getElementById('tabSgProduct').classList.toggle('hidden', tab!=='sgproduct');
+  document.getElementById('tabMerged').classList.toggle('hidden', tab!=='merged');
 }
 
 // ===== 叫貨記錄 =====
@@ -497,17 +530,24 @@ function buildSgProductData(rows, skuMap) {
 
 function renderSgProduct() {
   const mode = document.getElementById('sgfM').value;
+  const sortBy = document.getElementById('sgSort').value;
+  const kw = document.getElementById('sgSearch').value.trim();
   let f = SG_DATA.filter(r => {
     if (mode==='multi' && !r.avg_gap) return false;
     if (mode==='once' && r.avg_gap) return false;
+    if (kw && !r.product.includes(kw)) return false;
     return true;
   });
-  f.sort((a,b) => {
-    if (a.avg_gap&&!b.avg_gap) return -1;
-    if (!a.avg_gap&&b.avg_gap) return 1;
-    if (a.avg_gap&&b.avg_gap) return a.avg_gap-b.avg_gap;
-    return a.product.localeCompare(b.product);
-  });
+  if (sortBy === 'qty') {
+    f.sort((a,b) => b.total_qty - a.total_qty || a.product.localeCompare(b.product));
+  } else {
+    f.sort((a,b) => {
+      if (a.avg_gap&&!b.avg_gap) return -1;
+      if (!a.avg_gap&&b.avg_gap) return 1;
+      if (a.avg_gap&&b.avg_gap) return a.avg_gap-b.avg_gap;
+      return a.product.localeCompare(b.product);
+    });
+  }
   const tq=f.reduce((s,r)=>s+r.total_qty,0), wc=f.filter(r=>r.avg_gap);
   const ac=wc.length?Math.round(wc.reduce((s,r)=>s+r.avg_gap,0)/wc.length):null;
   document.getElementById('sgSumBar').innerHTML=`
@@ -526,6 +566,46 @@ function renderSgProduct() {
     }).join('');
     return `<div class="card"><div class="card-head"><span class="pname">${r.product}</span>${badge}<span class="total-note">累計 ${r.total_qty} 組</span></div><table><thead><tr><th>下單日期</th><th>叫貨量</th><th>距上次間隔</th></tr></thead><tbody>${trows}</tbody></table></div>`;
   }).join('');
+}
+
+// ===== 商品合併統計：VIP(客戶下單記錄，跨客戶加總)＋SiteGiant(已出貨)，依商品名稱合併 =====
+// 只合總量，不合週期——兩邊「週期」定義不同(VIP是同客戶重複下單間隔，SiteGiant是不分客戶的下單間隔)，合起來沒有意義。
+function aggregateVipByProduct(allData) {
+  const map = {};
+  allData.forEach(r => { map[r.product] = (map[r.product]||0) + r.total_qty; });
+  return map;
+}
+
+function renderMerged() {
+  const kw = document.getElementById('mergedSearch').value.trim();
+  const vipMap = aggregateVipByProduct(ALL_DATA);
+  const sgMap = {};
+  SG_DATA.forEach(r => { sgMap[r.product] = r.total_qty; });
+
+  const products = [...new Set([...Object.keys(vipMap), ...Object.keys(sgMap)])];
+  let rows = products.map(p => {
+    const vipQty = vipMap[p]||0, sgQty = sgMap[p]||0;
+    return { product: p, vipQty, sgQty, total: vipQty+sgQty };
+  });
+  if (kw) rows = rows.filter(r => r.product.includes(kw));
+  rows.sort((a,b) => b.total - a.total || a.product.localeCompare(b.product));
+
+  const totalVip = rows.reduce((s,r)=>s+r.vipQty,0);
+  const totalSg = rows.reduce((s,r)=>s+r.sgQty,0);
+  document.getElementById('mergedSumBar').innerHTML=`
+    <div class="metric"><div class="lbl">商品數</div><div class="val">${rows.length}</div></div>
+    <div class="metric"><div class="lbl">VIP累計量</div><div class="val">${totalVip.toLocaleString()}</div></div>
+    <div class="metric"><div class="lbl">SiteGiant累計量</div><div class="val">${totalSg.toLocaleString()}</div></div>
+    <div class="metric"><div class="lbl">合計</div><div class="val">${(totalVip+totalSg).toLocaleString()}</div></div>`;
+
+  if (!rows.length) { document.getElementById('mergedRows').innerHTML = `<tr><td colspan="4"><div class="empty" style="border:none">無符合條件的資料</div></td></tr>`; return; }
+  document.getElementById('mergedRows').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.product}</td>
+      <td style="text-align:right">${r.vipQty?r.vipQty.toLocaleString():'—'}</td>
+      <td style="text-align:right">${r.sgQty?r.sgQty.toLocaleString():'—'}</td>
+      <td style="text-align:right;font-weight:700">${r.total.toLocaleString()}</td>
+    </tr>`).join('');
 }
 
 // ===== 初始化 =====
@@ -565,6 +645,7 @@ async function init() {
     const sgSheet = json['SiteGiant已出貨'];
     SG_DATA = sgSheet ? buildSgProductData(sgSheet.rows, json._skuMap) : [];
     renderSgProduct();
+    renderMerged();
   } catch(err) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
