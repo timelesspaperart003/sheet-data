@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VIP 情境組叫貨分析</title>
+<title>VIP 叫貨週期分析</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
 :root{--bg:#f5f3ef;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd6;--text:#1a1714;--text2:#6b6560;--text3:#9e9993;--accent:#2d6a4f;--accent-light:#e8f5ef;--accent-mid:#74c69d;--warn:#c77a2a;--warn-light:#fdf3e7;--red:#b83232;--red-light:#fdf0f0;--mono:'DM Mono',monospace;--sans:'Noto Sans TC',sans-serif}
@@ -132,13 +132,14 @@ tbody td:nth-child(3){text-align:right}
 <!-- 主畫面 -->
 <div id="mainScreen">
   <header>
-    <h1><span>雋永紙藝 · VIP 出貨單</span>情境組叫貨分析</h1>
+    <h1><span>雋永紙藝 · VIP 出貨單</span>叫貨週期分析</h1>
     <div class="updated" id="updatedAt"></div>
   </header>
 
   <div class="tabs">
     <button class="tab active" onclick="switchTab('history')">📋 叫貨記錄</button>
     <button class="tab" onclick="switchTab('predict')">🔮 補貨預測</button>
+    <button class="tab" onclick="switchTab('sgproduct')">📦 SiteGiant 商品週期</button>
   </div>
 
   <!-- 叫貨記錄 -->
@@ -186,14 +187,31 @@ tbody td:nth-child(3){text-align:right}
     </div>
     <div class="pred-grid" id="predCards"></div>
   </div>
+
+  <!-- SiteGiant 商品週期（不分客戶，純商品叫貨週期/總量統計） -->
+  <div id="tabSgProduct" class="hidden">
+    <div class="summary-bar" id="sgSumBar"></div>
+    <div class="controls">
+      <label>顯示</label>
+      <select id="sgfM" onchange="renderSgProduct()">
+        <option value="all">全部</option>
+        <option value="multi">有週期（多次下單）</option>
+        <option value="once">僅一次下單</option>
+      </select>
+    </div>
+    <div class="cards" id="sgCards"></div>
+  </div>
 </div>
 
 <script>
 const DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/vip_orders.json';
+const SG_DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/sitegiant_products.json';
 let ALL_DATA = [];
+let SG_DATA = [];
 let AUTH_HASHES = [];
 let selectedProduct = '';
 let currentTab = 'history';
+const TAB_IDS = ['history','predict','sgproduct'];
 
 // ===== 密碼驗證 =====
 async function sha256(str) {
@@ -290,7 +308,7 @@ function buildData(rows) {
     if (!d||!c) return;
     itemCols.forEach(([ii,qi]) => {
       const p = String(row[ii]||'').trim();
-      if (!p.includes('情境組')||/[*$改補修]/.test(p)) return;
+      if (!p || /[*$改補修]/.test(p)) return;
       const q = parseInt(row[qi]);
       if (!isNaN(q)&&q>0) records.push({date:d,customer:c,product:p,qty:q});
     });
@@ -328,9 +346,10 @@ function buildData(rows) {
 // ===== Tab =====
 function switchTab(tab) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='history')||(i===1&&tab==='predict')));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', TAB_IDS[i]===tab));
   document.getElementById('tabHistory').classList.toggle('hidden', tab!=='history');
   document.getElementById('tabPredict').classList.toggle('hidden', tab!=='predict');
+  document.getElementById('tabSgProduct').classList.toggle('hidden', tab!=='sgproduct');
 }
 
 // ===== 叫貨記錄 =====
@@ -425,6 +444,52 @@ function renderPredict() {
   }).join('');
 }
 
+// ===== SiteGiant 商品週期（不分客戶，純商品彙整） =====
+function renderSgProduct() {
+  const mode = document.getElementById('sgfM').value;
+  let f = SG_DATA.filter(r => {
+    if (mode==='multi' && !r.avg_gap) return false;
+    if (mode==='once' && r.avg_gap) return false;
+    return true;
+  });
+  f.sort((a,b) => {
+    if (a.avg_gap&&!b.avg_gap) return -1;
+    if (!a.avg_gap&&b.avg_gap) return 1;
+    if (a.avg_gap&&b.avg_gap) return a.avg_gap-b.avg_gap;
+    return a.product.localeCompare(b.product);
+  });
+  const tq=f.reduce((s,r)=>s+r.total_qty,0), wc=f.filter(r=>r.avg_gap);
+  const ac=wc.length?Math.round(wc.reduce((s,r)=>s+r.avg_gap,0)/wc.length):null;
+  document.getElementById('sgSumBar').innerHTML=`
+    <div class="metric"><div class="lbl">品項數</div><div class="val">${f.length}</div></div>
+    <div class="metric"><div class="lbl">累積總出貨量</div><div class="val">${tq.toLocaleString()}</div></div>
+    <div class="metric"><div class="lbl">有週期品項</div><div class="val">${wc.length}</div></div>
+    <div class="metric"><div class="lbl">平均補貨週期</div><div class="val">${ac?ac+'天':'—'}</div></div>`;
+  if (!f.length){document.getElementById('sgCards').innerHTML='<div class="empty">無符合條件的資料</div>';return;}
+  const mq=Math.max(...f.flatMap(r=>r.entries.map(e=>e[1])));
+  document.getElementById('sgCards').innerHTML=f.map(r=>{
+    const badge=r.avg_gap&&r.avg_gap<=14?`<span class="cbadge c-hot">每 ${r.avg_gap} 天</span>`:r.avg_gap?`<span class="cbadge c-normal">每 ${r.avg_gap} 天</span>`:`<span class="cbadge c-once">僅一次</span>`;
+    const trows=r.entries.map(([d,q],i)=>{
+      const g=i>0?r.gaps[i-1]:null, p=Math.round((q/mq)*100);
+      const gh=g!=null?`<span class="gtag">+${g} 天</span>`:`<span class="ftag">首次</span>`;
+      return `<tr><td><span class="dcel">${d}</span></td><td><div class="qcell"><div class="bar-wrap"><div class="bar-fill" style="width:${p}%"></div></div><span class="qnum">${q}</span></div></td><td>${gh}</td></tr>`;
+    }).join('');
+    return `<div class="card"><div class="card-head"><span class="pname">${r.product}</span>${badge}<span class="total-note">累計 ${r.total_qty} 組</span></div><table><thead><tr><th>下單日期</th><th>叫貨量</th><th>距上次間隔</th></tr></thead><tbody>${trows}</tbody></table></div>`;
+  }).join('');
+}
+
+async function loadSgProduct() {
+  try {
+    const res = await fetch(SG_DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    SG_DATA = json.products || [];
+    renderSgProduct();
+  } catch (err) {
+    document.getElementById('sgCards').innerHTML = `<div class="error">⚠ SiteGiant 統計載入失敗：${err.message}<br>請先確認 sync.gs 已同步過至少一次出貨（觸發 pushSiteGiantStatsToGitHub）。</div>`;
+  }
+}
+
 // ===== 初始化 =====
 async function init() {
   try {
@@ -465,6 +530,7 @@ async function init() {
   }
 }
 init();
+loadSgProduct();
 </script>
 </body>
 </html>
