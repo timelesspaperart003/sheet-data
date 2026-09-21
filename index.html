@@ -205,7 +205,6 @@ tbody td:nth-child(3){text-align:right}
 
 <script>
 const DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/vip_orders.json';
-const SG_DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/sitegiant_products.json';
 let ALL_DATA = [];
 let SG_DATA = [];
 let AUTH_HASHES = [];
@@ -445,6 +444,55 @@ function renderPredict() {
 }
 
 // ===== SiteGiant 商品週期（不分客戶，純商品彙整） =====
+// 資料來源：同一份 vip_orders.json 裡的「SiteGiant已出貨」key（GAS SHEETS_TO_EXPORT 多讀一份表），
+// 不分客戶（SiteGiant 收件人跟這裡的客戶名稱沒有共通ID，比不了），在瀏覽器端依商品+下單日彙整週期。
+function buildSgProductData(rows) {
+  if (!rows || rows.length < 2) return [];
+  const header = rows[0], dataRows = rows.slice(1);
+  const idxOrderTime = header.indexOf('order_time');
+  const idxItemsJson = header.indexOf('items_json');
+  if (idxOrderTime === -1 || idxItemsJson === -1) return [];
+
+  const byProductDay = {};
+  dataRows.forEach(row => {
+    const d = parseDate(row[idxOrderTime]);
+    if (!d) return;
+    let items = [];
+    try { items = row[idxItemsJson] ? JSON.parse(row[idxItemsJson]) : []; } catch (e) { items = []; }
+    const dayKey = d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    items.forEach(it => {
+      const name = String(it.name||'').trim();
+      const qty = Number(it.qty)||0;
+      if (!name || qty<=0) return;
+      if (!byProductDay[name]) byProductDay[name] = {};
+      byProductDay[name][dayKey] = (byProductDay[name][dayKey]||0) + qty;
+    });
+  });
+
+  const TODAY = new Date();
+  const fmt = d => d.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+  const results = [];
+  Object.entries(byProductDay).forEach(([product, dayMap]) => {
+    const entries = Object.entries(dayMap).map(([dayKey,q]) => {
+      const [y,m,dd] = dayKey.split('-').map(Number);
+      return [new Date(y,m-1,dd), q];
+    }).sort((a,b)=>a[0]-b[0]);
+    const gaps = entries.slice(1).map((e,i)=>Math.round((e[0]-entries[i][0])/86400000));
+    const realGaps = gaps.filter(g=>g>0);
+    const avg_gap = realGaps.length?Math.round(realGaps.reduce((a,b)=>a+b,0)/realGaps.length):null;
+    const lastDate = entries[entries.length-1][0];
+    const daysSince = Math.round((TODAY-lastDate)/86400000);
+    const daysUntil = avg_gap?avg_gap-daysSince:null;
+    const urgency = avg_gap?Math.round(daysSince/avg_gap*100):0;
+    const nextDate=(avg_gap&&daysUntil!==null)?fmt(new Date(TODAY.getTime()+Math.max(0,daysUntil)*86400000)):null;
+    results.push({product, entries: entries.map(([d,q])=>[fmt(d),q]), gaps, avg_gap,
+      total_qty: entries.reduce((s,[,q])=>s+q,0), last_date: fmt(lastDate),
+      last_qty: entries[entries.length-1][1], days_since: daysSince, days_until: daysUntil, urgency, next_date: nextDate});
+  });
+  results.sort((a,b)=>a.product.localeCompare(b.product));
+  return results;
+}
+
 function renderSgProduct() {
   const mode = document.getElementById('sgfM').value;
   let f = SG_DATA.filter(r => {
@@ -476,18 +524,6 @@ function renderSgProduct() {
     }).join('');
     return `<div class="card"><div class="card-head"><span class="pname">${r.product}</span>${badge}<span class="total-note">累計 ${r.total_qty} 組</span></div><table><thead><tr><th>下單日期</th><th>叫貨量</th><th>距上次間隔</th></tr></thead><tbody>${trows}</tbody></table></div>`;
   }).join('');
-}
-
-async function loadSgProduct() {
-  try {
-    const res = await fetch(SG_DATA_URL + '?t=' + Date.now());
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    SG_DATA = json.products || [];
-    renderSgProduct();
-  } catch (err) {
-    document.getElementById('sgCards').innerHTML = `<div class="error">⚠ SiteGiant 統計載入失敗：${err.message}<br>請先確認 sync.gs 已同步過至少一次出貨（觸發 pushSiteGiantStatsToGitHub）。</div>`;
-  }
 }
 
 // ===== 初始化 =====
@@ -523,6 +559,10 @@ async function init() {
     document.getElementById('updatedAt').textContent = '資料更新：' + sheet.updatedAt;
     renderHistory();
     renderPredict();
+
+    const sgSheet = json['SiteGiant已出貨'];
+    SG_DATA = sgSheet ? buildSgProductData(sgSheet.rows) : [];
+    renderSgProduct();
   } catch(err) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
@@ -530,7 +570,6 @@ async function init() {
   }
 }
 init();
-loadSgProduct();
 </script>
 </body>
 </html>
