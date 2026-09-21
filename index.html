@@ -447,18 +447,17 @@ function renderPredict() {
 // 資料來源：同一份 vip_orders.json 裡的「SiteGiant已出貨」key（GAS SHEETS_TO_EXPORT 多讀一份表），
 // 不分客戶（SiteGiant 收件人跟這裡的客戶名稱沒有共通ID，比不了），在瀏覽器端依商品+下單日彙整週期。
 function buildSgProductData(rows) {
-  if (!rows || rows.length < 2) return [];
-  const header = rows[0], dataRows = rows.slice(1);
-  const idxOrderTime = header.indexOf('order_time');
-  const idxItemsJson = header.indexOf('items_json');
-  if (idxOrderTime === -1 || idxItemsJson === -1) return [];
+  // 「SiteGiant已出貨」這張表沒有標題列(第一列就是真實資料)，欄位順序固定照 sync.gs 的 COLUMNS：
+  // order_id,marketplace_order_id,channel_name,order_status,order_time,ship_by_date,recipient_name,...
+  const IDX_ORDER_TIME = 4, IDX_ITEMS_JSON = 15;
+  if (!rows || !rows.length) return [];
 
   const byProductDay = {};
-  dataRows.forEach(row => {
-    const d = parseDate(row[idxOrderTime]);
+  rows.forEach(row => {
+    const d = parseDate(row[IDX_ORDER_TIME]);
     if (!d) return;
     let items = [];
-    try { items = row[idxItemsJson] ? JSON.parse(row[idxItemsJson]) : []; } catch (e) { items = []; }
+    try { items = row[IDX_ITEMS_JSON] ? JSON.parse(row[IDX_ITEMS_JSON]) : []; } catch (e) { items = []; }
     const dayKey = d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
     items.forEach(it => {
       const name = String(it.name||'').trim();
