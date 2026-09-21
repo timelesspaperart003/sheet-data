@@ -352,7 +352,7 @@ function buildData(rows) {
     if (!tl[k2]) tl[k2]=[];
     tl[k2].push([new Date(+ts),q]);
   });
-  const TODAY = new Date(2026,4,21);
+  const TODAY = new Date();
   const results = [];
   Object.entries(tl).forEach(([k,entries]) => {
     const [customer,product]=k.split('|||');
