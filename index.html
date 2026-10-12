@@ -705,7 +705,10 @@ async function init() {
 
     const sheet = json['客戶下單記錄'];
     if (!sheet) throw new Error('找不到工作表資料');
-    ALL_DATA = buildData(sheet.rows);
+    const archiveSheet = json['客戶下單記錄_封存'];
+    // 封存分頁跟現役分頁欄位格式一樣，合併時只取封存那邊的資料列(跳過它自己的標題列)
+    const mergedRows = archiveSheet ? sheet.rows.concat(archiveSheet.rows.slice(1)) : sheet.rows;
+    ALL_DATA = buildData(mergedRows);
 
     const customers = [...new Set(ALL_DATA.map(d=>d.customer))].sort();
     const products  = [...new Set(ALL_DATA.map(d=>d.product))].sort();
