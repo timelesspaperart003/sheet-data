@@ -199,7 +199,7 @@ tbody td:nth-child(3){text-align:right}
     <div class="summary-bar" id="sgSumBar"></div>
     <div class="controls">
       <label>搜尋</label>
-      <input type="text" id="sgSearch" placeholder="商品名稱" autocomplete="off" oninput="renderSgProduct()"
+      <input type="text" id="sgSearch" placeholder="商品名稱" autocomplete="off" oninput="debounceRun(renderSgProduct)"
         style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
       <div class="sep"></div>
       <label>顯示</label>
@@ -235,7 +235,7 @@ tbody td:nth-child(3){text-align:right}
     <div class="summary-bar" id="mergedSumBar"></div>
     <div class="controls">
       <label>搜尋</label>
-      <input type="text" id="mergedSearch" placeholder="商品名稱" autocomplete="off" oninput="renderMerged()"
+      <input type="text" id="mergedSearch" placeholder="商品名稱" autocomplete="off" oninput="debounceRun(renderMerged)"
         style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
       <div class="sep"></div>
       <label>區間</label>
@@ -260,6 +260,13 @@ tbody td:nth-child(3){text-align:right}
 <script>
 const DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/vip_orders.json';
 let ALL_DATA = [];
+
+// 搜尋框：停止輸入 200ms 後才重畫，避免每打一個字就重繪全部卡片
+let _debounceTimer = null;
+function debounceRun(fn) {
+  clearTimeout(_debounceTimer);
+  _debounceTimer = setTimeout(fn, 200);
+}
 let SG_DATA = [];
 let AUTH_HASHES = [];
 let selectedProduct = '';
@@ -689,7 +696,8 @@ function renderMerged() {
 // ===== 初始化 =====
 async function init() {
   try {
-    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    // no-cache：每次都向伺服器確認（ETag），資料沒變就回 304、直接用瀏覽器裡的那份，不必重新下載整包
+    const res = await fetch(DATA_URL, { cache: 'no-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
 
