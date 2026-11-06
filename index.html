@@ -49,6 +49,7 @@ header h1 span{display:block;font-size:.8rem;font-weight:400;color:var(--text3);
 select{font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;outline:none}
 select:focus{border-color:var(--accent-mid)}
 .sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.range-group{display:flex;align-items:center;gap:8px}
 
 /* Searchable select */
 .search-select-wrap{position:relative;display:inline-block}
@@ -170,10 +171,12 @@ tbody td:nth-child(3){text-align:right}
         <option value="once">僅一次下單</option>
       </select>
       <div class="sep"></div>
-      <label>區間</label>
-      <input type="date" id="fFrom" onchange="renderHistory()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-      <span style="color:var(--text3)">～</span>
-      <input type="date" id="fTo" onchange="renderHistory()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      <div class="range-group">
+        <label>區間</label>
+        <input type="date" id="fFrom" onchange="renderHistory()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+        <span style="color:var(--text3)">～</span>
+        <input type="date" id="fTo" onchange="renderHistory()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      </div>
     </div>
     <div class="cards" id="historyCards"></div>
   </div>
@@ -226,10 +229,12 @@ tbody td:nth-child(3){text-align:right}
         <option value="stock">叫貨商品</option>
       </select>
       <div class="sep"></div>
-      <label>區間</label>
-      <input type="date" id="sgFrom" onchange="renderSgProduct()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-      <span style="color:var(--text3)">～</span>
-      <input type="date" id="sgTo" onchange="renderSgProduct()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      <div class="range-group">
+        <label>區間</label>
+        <input type="date" id="sgFrom" onchange="renderSgProduct()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+        <span style="color:var(--text3)">～</span>
+        <input type="date" id="sgTo" onchange="renderSgProduct()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      </div>
     </div>
     <div class="cards" id="sgCards"></div>
   </div>
@@ -242,10 +247,12 @@ tbody td:nth-child(3){text-align:right}
       <input type="text" id="mergedSearch" placeholder="商品名稱" autocomplete="off" oninput="renderMerged()"
         style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
       <div class="sep"></div>
-      <label>區間</label>
-      <input type="date" id="mergedFrom" onchange="renderMerged()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-      <span style="color:var(--text3)">～</span>
-      <input type="date" id="mergedTo" onchange="renderMerged()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      <div class="range-group">
+        <label>區間</label>
+        <input type="date" id="mergedFrom" onchange="renderMerged()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+        <span style="color:var(--text3)">～</span>
+        <input type="date" id="mergedTo" onchange="renderMerged()" style="font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+      </div>
     </div>
     <div class="tableWrap" style="max-width:960px;margin:0 auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
