@@ -199,7 +199,7 @@ tbody td:nth-child(3){text-align:right}
     <div class="summary-bar" id="sgSumBar"></div>
     <div class="controls">
       <label>搜尋</label>
-      <input type="text" id="sgSearch" placeholder="商品名稱" autocomplete="off" oninput="debounceRun(renderSgProduct)"
+      <input type="text" id="sgSearch" placeholder="商品名稱" autocomplete="off" oninput="renderSgProduct()"
         style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
       <div class="sep"></div>
       <label>顯示</label>
@@ -235,7 +235,7 @@ tbody td:nth-child(3){text-align:right}
     <div class="summary-bar" id="mergedSumBar"></div>
     <div class="controls">
       <label>搜尋</label>
-      <input type="text" id="mergedSearch" placeholder="商品名稱" autocomplete="off" oninput="debounceRun(renderMerged)"
+      <input type="text" id="mergedSearch" placeholder="商品名稱" autocomplete="off" oninput="renderMerged()"
         style="font-family:var(--sans);font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);outline:none;width:180px">
       <div class="sep"></div>
       <label>區間</label>
@@ -260,18 +260,12 @@ tbody td:nth-child(3){text-align:right}
 <script>
 const DATA_URL = 'https://raw.githubusercontent.com/timelesspaperart003/sheet-data/main/vip_orders.json';
 let ALL_DATA = [];
-
-// 搜尋框：停止輸入 200ms 後才重畫，避免每打一個字就重繪全部卡片
-let _debounceTimer = null;
-function debounceRun(fn) {
-  clearTimeout(_debounceTimer);
-  _debounceTimer = setTimeout(fn, 200);
-}
 let SG_DATA = [];
-let AUTH_HASHES = [];
+let AUTH_USERS = []; // [{hash, tabs:['history',...]}]
 let selectedProduct = '';
 let currentTab = 'history';
 const TAB_IDS = ['history','predict','sgproduct','merged'];
+const ALL_TAB_IDS = ['history','predict','sgproduct','merged'];
 
 // ===== 密碼驗證 =====
 async function sha256(str) {
@@ -279,17 +273,38 @@ async function sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
+// 依密碼對應的 hash 找出權限(可看哪些分頁)；找不到就回 null
+function findTabsForHash(hash) {
+  const u = AUTH_USERS.find(u => u.hash === hash);
+  return u ? (u.tabs && u.tabs.length ? u.tabs : ALL_TAB_IDS) : null;
+}
+
 async function doLogin() {
   const pw = document.getElementById('pwInput').value;
   if (!pw) return;
   const hash = await sha256(pw);
-  if (AUTH_HASHES.includes(hash)) {
+  const tabs = findTabsForHash(hash);
+  if (tabs) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
     sessionStorage.setItem('vip_auth', hash);
+    applyTabPermissions(tabs);
   } else {
     document.getElementById('loginErr').textContent = '密碼錯誤，請再試一次';
     document.getElementById('pwInput').value = '';
+  }
+}
+
+// 把不在權限內的分頁按鈕隱藏，並切到第一個有權限看的分頁
+function applyTabPermissions(tabs) {
+  const buttons = document.querySelectorAll('.tab');
+  buttons.forEach((btn, i) => {
+    const id = TAB_IDS[i];
+    btn.classList.toggle('hidden', !tabs.includes(id));
+  });
+  if (!tabs.includes(currentTab)) {
+    const first = TAB_IDS.find(id => tabs.includes(id));
+    if (first) switchTab(first);
   }
 }
 
@@ -696,19 +711,27 @@ function renderMerged() {
 // ===== 初始化 =====
 async function init() {
   try {
-    // no-cache：每次都向伺服器確認（ETag），資料沒變就回 304、直接用瀏覽器裡的那份，不必重新下載整包
-    const res = await fetch(DATA_URL, { cache: 'no-cache' });
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
 
-    // 讀取密碼 hash
-    AUTH_HASHES = json._auth?.hashes || [];
+    // 讀取使用者權限清單：新格式 _auth.users=[{hash,tabs}]；
+    // 舊格式 _auth.hashes=[hash,...] 向下相容，視為全部分頁都能看
+    if (json._auth?.users) {
+      AUTH_USERS = json._auth.users;
+    } else if (json._auth?.hashes) {
+      AUTH_USERS = json._auth.hashes.map(h => ({ hash: h, tabs: ALL_TAB_IDS }));
+    } else {
+      AUTH_USERS = [];
+    }
 
     // 檢查 sessionStorage 是否已登入
     const cached = sessionStorage.getItem('vip_auth');
-    if (cached && AUTH_HASHES.includes(cached)) {
+    const cachedTabs = cached ? findTabsForHash(cached) : null;
+    if (cachedTabs) {
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainScreen').style.display = 'block';
+      applyTabPermissions(cachedTabs);
     }
 
     const sheet = json['客戶下單記錄'];
@@ -743,7 +766,5 @@ async function init() {
 }
 init();
 </script>
-<!-- 意見回饋（共用 feedback-hub，題目在 hub 的 questions.js） -->
-<script src="https://feedback-hub.timelesspaperart003.workers.dev/widget.js" data-project="VIP叫貨週期分析"></script>
 </body>
 </html>

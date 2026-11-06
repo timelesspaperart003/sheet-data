@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP 統計頁 管理後台</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+:root{--bg:#f5f3ef;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd6;--text:#1a1714;--text2:#6b6560;--text3:#9e9993;--accent:#2d6a4f;--accent-light:#e8f5ef;--accent-mid:#74c69d;--warn:#c77a2a;--warn-light:#fdf3e7;--red:#b83232;--red-light:#fdf0f0;--mono:'DM Mono',monospace;--sans:'Noto Sans TC',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:360px;text-align:center}
+.login-box h2{font-size:1.2rem;font-weight:700;margin-bottom:.4rem}
+.login-box p{font-size:13px;color:var(--text3);margin-bottom:1.5rem}
+.login-box input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;outline:none;margin-bottom:10px;background:var(--surface)}
+.login-box input:focus{border-color:var(--accent-mid)}
+.login-box button{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer}
+.login-box button:hover{opacity:.9}
+.login-err{font-size:12px;color:var(--red);margin-top:8px;min-height:18px}
+
+#mainScreen{display:none;padding:2rem 1.5rem 4rem}
+.wrap{max-width:760px;margin:0 auto}
+header{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem;padding-bottom:1.25rem;margin-bottom:1.5rem;border-bottom:1.5px solid var(--border)}
+header h1{font-size:1.4rem;font-weight:700;letter-spacing:-.02em}
+header h1 span{display:block;font-size:.8rem;font-weight:400;color:var(--text3);margin-bottom:4px;font-family:var(--mono)}
+.btn{font-family:var(--sans);font-size:13px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{opacity:.9}
+.btn.danger{color:var(--red);border-color:#f5c0c0}
+.btn.danger:hover{background:var(--red-light)}
+.btn:disabled{opacity:.5;cursor:default}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row + .row{margin-top:10px}
+.pwfield{font-family:var(--mono);font-size:14px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);min-width:140px;flex:1}
+.tabchecks{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text2)}
+.tabchecks label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.admincheck{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--warn);font-weight:500}
+.key-tag{font-size:11px;font-family:var(--mono);color:var(--text3);background:var(--surface2);padding:2px 8px;border-radius:99px}
+.legacy-tag{font-size:11px;color:var(--text3)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.msg{font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.msg.ok{background:var(--accent-light);color:var(--accent)}
+.msg.err{background:var(--red-light);color:var(--red)}
+.section-title{font-size:13px;font-weight:700;color:var(--text2);margin:28px 0 10px}
+.hint{font-size:12px;color:var(--text3);margin-top:6px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h2>管理後台</h2>
+    <p>VIP 統計頁 · 使用者權限管理</p>
+    <input type="password" id="pwInput" placeholder="請輸入管理員密碼" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">登入</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div id="mainScreen">
+  <div class="wrap">
+    <header>
+      <h1><span>雋永紙藝 · VIP 統計頁</span>使用者權限管理</h1>
+      <button class="btn primary" onclick="publishNow()" id="publishBtn">立即套用到網頁</button>
+    </header>
+
+    <div id="msgBox"></div>
+
+    <div class="section-title">現有密碼</div>
+    <div id="userList"></div>
+
+    <div class="section-title">新增密碼</div>
+    <div class="card">
+      <div class="row">
+        <input type="text" class="pwfield" id="newPw" placeholder="新密碼">
+      </div>
+      <div class="row">
+        <div class="tabchecks" id="newTabs">
+          <label><input type="checkbox" value="history" checked> 叫貨記錄</label>
+          <label><input type="checkbox" value="predict" checked> 補貨預測</label>
+          <label><input type="checkbox" value="sgproduct" checked> SiteGiant商品週期</label>
+          <label><input type="checkbox" value="merged" checked> 商品合併統計</label>
+        </div>
+      </div>
+      <div class="row">
+        <label class="admincheck"><input type="checkbox" id="newAdmin"> 設為管理員(可登入這個管理後台)</label>
+        <button class="btn primary" onclick="addUser()" style="margin-left:auto">新增</button>
+      </div>
+    </div>
+    <div class="hint">新增/修改/刪除後,要按右上角「立即套用到網頁」才會馬上生效；不按的話,會等到每天凌晨排程自動更新。</div>
+  </div>
+</div>
+
+<script>
+// 部署完 Web App 後，把下面這個網址換成你的 /exec 網址
+const API_URL = 'https://script.google.com/macros/s/AKfycbwV0OATxe3fNwnFjOuxm9j8vUW0X8gBPdUVdH-0TdmR5k5XabdSF272JK7eKzBXlnsGbA/exec';
+
+const TAB_LABELS = { history: '叫貨記錄', predict: '補貨預測', sgproduct: 'SiteGiant商品週期', merged: '商品合併統計' };
+const ALL_TABS = ['history','predict','sgproduct','merged'];
+let ADMIN_PW = '';
+
+async function callApi(payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || '未知錯誤');
+  return data;
+}
+
+function showMsg(text, isErr) {
+  const box = document.getElementById('msgBox');
+  box.innerHTML = `<div class="msg ${isErr ? 'err' : 'ok'}">${text}</div>`;
+  setTimeout(() => { box.innerHTML = ''; }, 4000);
+}
+
+async function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  if (!pw) return;
+  try {
+    const data = await callApi({ action: 'listUsers', adminPassword: pw });
+    ADMIN_PW = pw;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    renderUsers(data.users);
+  } catch (err) {
+    document.getElementById('loginErr').textContent = '密碼錯誤或非管理員(' + err.message + ')';
+    document.getElementById('pwInput').value = '';
+  }
+}
+
+async function refreshUsers() {
+  const data = await callApi({ action: 'listUsers', adminPassword: ADMIN_PW });
+  renderUsers(data.users);
+}
+
+function tabCheckboxes(prefix, selected) {
+  return ALL_TABS.map(id => {
+    const checked = selected.includes(id) ? 'checked' : '';
+    return `<label><input type="checkbox" id="${prefix}_${id}" value="${id}" ${checked}> ${TAB_LABELS[id]}</label>`;
+  }).join('');
+}
+
+function renderUsers(users) {
+  const el = document.getElementById('userList');
+  if (!users.length) { el.innerHTML = '<div class="card" style="color:var(--text3);text-align:center">目前沒有任何密碼</div>'; return; }
+  el.innerHTML = users.map(u => `
+    <div class="card" data-key="${u.key}">
+      <div class="row">
+        <span class="key-tag">${u.key}</span>
+        <input type="text" class="pwfield" id="pw_${u.key}" value="${u.password.replace(/"/g,'&quot;')}">
+        ${u.legacy ? '<span class="legacy-tag">(舊格式密碼,預設全部分頁都能看)</span>' : ''}
+      </div>
+      <div class="row">
+        <div class="tabchecks" id="tabs_${u.key}">${tabCheckboxes('t_' + u.key, u.tabs)}</div>
+      </div>
+      <div class="row">
+        <label class="admincheck"><input type="checkbox" id="admin_${u.key}" ${u.admin ? 'checked' : ''}> 管理員</label>
+        <button class="btn" onclick="saveUser('${u.key}')" style="margin-left:auto">儲存</button>
+        <button class="btn danger" onclick="removeUser('${u.key}')">刪除</button>
+      </div>
+    </div>`).join('');
+}
+
+function readTabChecks(key) {
+  return ALL_TABS.filter(id => document.getElementById('t_' + key + '_' + id).checked);
+}
+
+async function saveUser(key) {
+  try {
+    const newPassword = document.getElementById('pw_' + key).value;
+    const tabs = readTabChecks(key);
+    const isAdmin = document.getElementById('admin_' + key).checked;
+    await callApi({ action: 'updateUser', adminPassword: ADMIN_PW, key, newPassword, tabs, isAdmin });
+    showMsg('已儲存：' + key);
+    await refreshUsers();
+  } catch (err) {
+    showMsg('儲存失敗：' + err.message, true);
+  }
+}
+
+async function removeUser(key) {
+  if (!confirm('確定要刪除這組密碼嗎？')) return;
+  try {
+    await callApi({ action: 'deleteUser', adminPassword: ADMIN_PW, key });
+    showMsg('已刪除：' + key);
+    await refreshUsers();
+  } catch (err) {
+    showMsg('刪除失敗：' + err.message, true);
+  }
+}
+
+async function addUser() {
+  const newPassword = document.getElementById('newPw').value.trim();
+  if (!newPassword) { showMsg('請輸入新密碼', true); return; }
+  const tabs = ALL_TABS.filter(id => document.querySelector(`#newTabs input[value="${id}"]`).checked);
+  const isAdmin = document.getElementById('newAdmin').checked;
+  try {
+    const data = await callApi({ action: 'addUser', adminPassword: ADMIN_PW, newPassword, tabs, isAdmin });
+    showMsg('已新增：' + data.key);
+    document.getElementById('newPw').value = '';
+    await refreshUsers();
+  } catch (err) {
+    showMsg('新增失敗：' + err.message, true);
+  }
+}
+
+async function publishNow() {
+  const btn = document.getElementById('publishBtn');
+  btn.disabled = true;
+  btn.textContent = '套用中...(可能要10幾秒)';
+  try {
+    await callApi({ action: 'publishNow', adminPassword: ADMIN_PW });
+    showMsg('已套用到網頁！');
+  } catch (err) {
+    showMsg('套用失敗：' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '立即套用到網頁';
+  }
+}
+</script>
+</body>
+</html>
