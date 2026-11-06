@@ -133,7 +133,10 @@ tbody td:nth-child(3){text-align:right}
 <div id="mainScreen">
   <header>
     <h1><span>雋永紙藝 · VIP 出貨單</span>叫貨週期分析</h1>
-    <div class="updated" id="updatedAt"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="updated" id="updatedAt"></div>
+      <button onclick="logout()" style="font-family:var(--sans);font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">登出</button>
+    </div>
   </header>
 
   <div class="tabs">
@@ -277,6 +280,11 @@ async function sha256(str) {
 function findTabsForHash(hash) {
   const u = AUTH_USERS.find(u => u.hash === hash);
   return u ? (u.tabs && u.tabs.length ? u.tabs : ALL_TAB_IDS) : null;
+}
+
+function logout() {
+  sessionStorage.removeItem('vip_auth');
+  location.reload();
 }
 
 async function doLogin() {
