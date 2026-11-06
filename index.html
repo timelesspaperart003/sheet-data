@@ -135,6 +135,7 @@ tbody td:nth-child(3){text-align:right}
     <h1><span>雋永紙藝 · VIP 出貨單</span>叫貨週期分析</h1>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="updated" id="updatedAt"></div>
+      <a id="adminLink" href="admin.html" class="hidden" style="font-family:var(--sans);font-size:12px;padding:5px 12px;border:1px solid var(--accent-mid);border-radius:6px;background:var(--accent-light);color:var(--accent);cursor:pointer;text-decoration:none">前往管理後台</a>
       <button onclick="logout()" style="font-family:var(--sans);font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">登出</button>
     </div>
   </header>
@@ -276,10 +277,11 @@ async function sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-// 依密碼對應的 hash 找出權限(可看哪些分頁)；找不到就回 null
-function findTabsForHash(hash) {
+// 依密碼對應的 hash 找出使用者資料(tabs/admin)；找不到就回 null
+function findUserForHash(hash) {
   const u = AUTH_USERS.find(u => u.hash === hash);
-  return u ? (u.tabs && u.tabs.length ? u.tabs : ALL_TAB_IDS) : null;
+  if (!u) return null;
+  return { tabs: u.tabs && u.tabs.length ? u.tabs : ALL_TAB_IDS, admin: !!u.admin };
 }
 
 function logout() {
@@ -291,12 +293,13 @@ async function doLogin() {
   const pw = document.getElementById('pwInput').value;
   if (!pw) return;
   const hash = await sha256(pw);
-  const tabs = findTabsForHash(hash);
-  if (tabs) {
+  const user = findUserForHash(hash);
+  if (user) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
     sessionStorage.setItem('vip_auth', hash);
-    applyTabPermissions(tabs);
+    applyTabPermissions(user.tabs);
+    document.getElementById('adminLink').classList.toggle('hidden', !user.admin);
   } else {
     document.getElementById('loginErr').textContent = '密碼錯誤，請再試一次';
     document.getElementById('pwInput').value = '';
@@ -728,18 +731,19 @@ async function init() {
     if (json._auth?.users) {
       AUTH_USERS = json._auth.users;
     } else if (json._auth?.hashes) {
-      AUTH_USERS = json._auth.hashes.map(h => ({ hash: h, tabs: ALL_TAB_IDS }));
+      AUTH_USERS = json._auth.hashes.map(h => ({ hash: h, tabs: ALL_TAB_IDS, admin: false }));
     } else {
       AUTH_USERS = [];
     }
 
     // 檢查 sessionStorage 是否已登入
     const cached = sessionStorage.getItem('vip_auth');
-    const cachedTabs = cached ? findTabsForHash(cached) : null;
-    if (cachedTabs) {
+    const cachedUser = cached ? findUserForHash(cached) : null;
+    if (cachedUser) {
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainScreen').style.display = 'block';
-      applyTabPermissions(cachedTabs);
+      applyTabPermissions(cachedUser.tabs);
+      document.getElementById('adminLink').classList.toggle('hidden', !cachedUser.admin);
     }
 
     const sheet = json['客戶下單記錄'];
